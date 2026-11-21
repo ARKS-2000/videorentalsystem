@@ -8,9 +8,13 @@ import com.crio.videorentalsystem.entity.User;
 import com.crio.videorentalsystem.exception.ResourceNotFoundException;
 import com.crio.videorentalsystem.exception.UserAlreadyExistsException;
 import com.crio.videorentalsystem.repository.UserRepository;
+import com.crio.videorentalsystem.security.CustomUserDetailsService;
+import com.crio.videorentalsystem.security.JwtService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +26,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
+    private final CustomUserDetailsService userDetailsService;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -41,12 +47,16 @@ public class AuthService {
 
         User savedUser = userRepository.save(user);
 
+        UserDetails userDetails = userDetailsService.loadUserByUsername(savedUser.getEmail());
+        String jwtToken = jwtService.generateToken(userDetails);
+
         return new AuthResponse(
             savedUser.getId(),
             savedUser.getEmail(),
             savedUser.getFirstName(),
             savedUser.getLastName(),
             savedUser.getRole(),
+            jwtToken,
             "User registered successfully"
         );
     }
@@ -59,12 +69,16 @@ public class AuthService {
         User user = userRepository.findByEmail(request.email())
             .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.email()));
 
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String jwtToken = jwtService.generateToken(userDetails);
+
         return new AuthResponse(
             user.getId(),
             user.getEmail(),
             user.getFirstName(),
             user.getLastName(),
             user.getRole(),
+            jwtToken,
             "Login successful"
         );
     }

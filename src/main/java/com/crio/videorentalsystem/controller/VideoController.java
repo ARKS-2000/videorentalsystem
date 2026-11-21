@@ -1,9 +1,13 @@
 package com.crio.videorentalsystem.controller;
 
+import com.crio.videorentalsystem.dto.RentalResponse;
 import com.crio.videorentalsystem.dto.VideoRequest;
 import com.crio.videorentalsystem.entity.Video;
+import com.crio.videorentalsystem.service.RentalService;
 import com.crio.videorentalsystem.service.VideoService;
 import jakarta.validation.Valid;
+
+import java.security.Principal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -23,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class VideoController {
 
     private final VideoService videoService;
+    private final RentalService rentalService;
 
     // CUSTOMER or ADMIN
     @GetMapping
@@ -54,5 +59,15 @@ public class VideoController {
     public ResponseEntity<Void> deleteVideo(@PathVariable Long id) {
         videoService.deleteVideo(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{videoId}/rent")
+    public ResponseEntity<RentalResponse> rentVideo(@PathVariable Long videoId, Principal principal) {
+        return ResponseEntity.ok(rentalService.rentVideo(videoId, principal.getName()));
+    }
+
+    @PostMapping("/{videoId}/return")
+    public ResponseEntity<RentalResponse> returnVideo(@PathVariable Long videoId, Principal principal) {
+        return ResponseEntity.ok(rentalService.returnVideo(videoId, principal.getName()));
     }
 }

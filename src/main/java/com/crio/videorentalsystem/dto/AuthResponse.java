@@ -8,5 +8,6 @@ public record AuthResponse(
     String firstName, 
     String lastName, 
     Role role, 
+    String token,
     String message
 ) {}

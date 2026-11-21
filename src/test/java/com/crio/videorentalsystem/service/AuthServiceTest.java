@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -15,6 +16,9 @@ import com.crio.videorentalsystem.entity.Role;
 import com.crio.videorentalsystem.entity.User;
 import com.crio.videorentalsystem.exception.UserAlreadyExistsException;
 import com.crio.videorentalsystem.repository.UserRepository;
+import com.crio.videorentalsystem.security.CustomUserDetailsService;
+import com.crio.videorentalsystem.security.JwtService;
+
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -36,6 +41,12 @@ class AuthServiceTest {
 
     @Mock
     private AuthenticationManager authenticationManager;
+
+    @Mock
+    private JwtService jwtService;
+
+    @Mock
+    private CustomUserDetailsService userDetailsService;
 
     @InjectMocks
     private AuthService authService;
@@ -52,15 +63,20 @@ class AuthServiceTest {
             .role(Role.CUSTOMER)
             .build();
 
+        UserDetails mockUserDetails = mock(UserDetails.class);
+
         when(userRepository.existsByEmail("john@test.com")).thenReturn(false);
         when(passwordEncoder.encode("rawPass")).thenReturn("encodedPass");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userDetailsService.loadUserByUsername("john@test.com")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("mock-jwt-token");
 
         AuthResponse response = authService.register(request);
 
         assertNotNull(response);
         assertEquals(Role.CUSTOMER, response.role());
         assertEquals("john@test.com", response.email());
+        assertEquals("mock-jwt-token", response.token());
         verify(passwordEncoder).encode("rawPass");
         verify(userRepository).save(any(User.class));
     }
@@ -86,12 +102,17 @@ class AuthServiceTest {
             .role(Role.ADMIN)
             .build();
 
+        UserDetails mockUserDetails = mock(UserDetails.class);
+
         when(userRepository.findByEmail("admin@test.com")).thenReturn(Optional.of(user));
+        when(userDetailsService.loadUserByUsername("admin@test.com")).thenReturn(mockUserDetails);
+        when(jwtService.generateToken(mockUserDetails)).thenReturn("mock-jwt-token");
 
         AuthResponse response = authService.login(request);
 
         verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
         assertEquals("Login successful", response.message());
         assertEquals(Role.ADMIN, response.role());
+        assertEquals("mock-jwt-token", response.token());
     }
 }
